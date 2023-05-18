@@ -4,7 +4,7 @@ import ndlib.models.epidemics as ep
 import matplotlib.pyplot as plt
 
 
-numnodes = 100
+numnodes = 10
 numedge = 3
 
 
