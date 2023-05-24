@@ -100,12 +100,16 @@ class LayeredNetworkGraph(object):
         for h in self.graphs[1:]:
             composition = nx.compose(composition, h)
 
-        pos = self.layout(composition, *args, **kwargs)
+        pos = self.layout(
+            composition, scale=2, *args, **kwargs
+        )  # Increase scale factor
 
         self.node_positions = dict()
         for z, g in enumerate(self.graphs):
             self.node_positions.update(
-                {(node, z): (*pos[node], z) for node in g.nodes()}
+                {
+                    (node, z): (*pos[node], z * 2) for node in g.nodes()
+                }  # Multiply z by a scaling factor
             )
 
     def draw_nodes(self, nodes, *args, **kwargs):
@@ -117,10 +121,10 @@ class LayeredNetworkGraph(object):
             (self.node_positions[source], self.node_positions[target])
             for source, target in edges
         ]
-        line_collection = Line3DCollection(segments, *args, **kwargs)
+        line_collection = Line3DCollection(segments, linewidths=0.8, *args, **kwargs)
         self.ax.add_collection3d(line_collection)
 
-    def get_extent(self, pad=0.1):
+    def get_extent(self, pad=0.5):
         xyz = np.array(list(self.node_positions.values()))
         xmin, ymin, _ = np.min(xyz, axis=0)
         xmax, ymax, _ = np.max(xyz, axis=0)
@@ -133,7 +137,7 @@ class LayeredNetworkGraph(object):
         u = np.linspace(xmin, xmax, 10)
         v = np.linspace(ymin, ymax, 10)
         U, V = np.meshgrid(u, v)
-        W = z * np.ones_like(U)
+        W = z * 2 * np.ones_like(U)  # Multiply z by a scaling factor
         self.ax.plot_surface(U, V, W, *args, **kwargs)
 
     def draw_node_labels(self, node_labels, *args, **kwargs):
@@ -145,16 +149,23 @@ class LayeredNetworkGraph(object):
 
     def draw(self):
         self.draw_edges(
-            self.edges_within_layers, color="k", alpha=0.3, linestyle="-", zorder=2
+            self.edges_within_layers, color="k", alpha=0.2, linestyle="-", zorder=-1
         )
         self.draw_edges(
-            self.edges_between_layers, color="k", alpha=0.3, linestyle="--", zorder=2
+            self.edges_between_layers, color="k", alpha=0.2, linestyle="--", zorder=-1
         )
 
+        self.ax.set_xlim([-1, 1])  # Adjust these values as needed
+        self.ax.set_ylim([-1, 1])  # Adjust these values as needed
+        self.ax.set_zlim([0, self.total_layers])  # Adjust these values as needed
+        self.ax.set_box_aspect(
+            [1, 1, 1]
+        )  # Set the aspect ratio of the axes to be equal
+
         for z in range(self.total_layers):
-            self.draw_plane(z, alpha=0.2, zorder=1)
+            self.draw_plane(z, alpha=0.3, zorder=5)
             self.draw_nodes(
-                [node for node in self.nodes if node[1] == z], s=300, zorder=3
+                [node for node in self.nodes if node[1] == z], s=130, zorder=1, alpha=1
             )
 
         if self.node_labels:
@@ -163,23 +174,29 @@ class LayeredNetworkGraph(object):
                 horizontalalignment="center",
                 verticalalignment="center",
                 zorder=100,
+                fontsize=8,
+                color="white",
             )
 
 
 if __name__ == "__main__":
     # define graphs
-    n = 5
-    g = nx.erdos_renyi_graph(4 * n, p=0.1)
-    h = nx.erdos_renyi_graph(3 * n, p=0.2)
-    i = nx.erdos_renyi_graph(2 * n, p=0.4)
+    n = 100  # Increase the number of nodes per layer
+    k = 2
+    g = nx.random_regular_graph(k, n)
+    h = nx.random_regular_graph(k, n)
+    i = nx.random_regular_graph(k, n)
 
-    node_labels = {nn: str(nn) for nn in range(4 * n)}
+    node_labels = {nn: str(nn) for nn in range(n)}
 
-    # initialise figure and plot
-    fig = plt.figure()
+    # initialize figure and plot
+    fig = plt.figure(figsize=(15, 10))  # Increase figure size
     ax = fig.add_subplot(111, projection="3d")
     LayeredNetworkGraph(
         [g, h, i], node_labels=node_labels, ax=ax, layout=nx.spring_layout
     )
+
+    for o in fig.findobj():
+        o.set_clip_on(False)
     ax.set_axis_off()
     plt.show()
