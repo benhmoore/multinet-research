@@ -1,4 +1,4 @@
-# Multinet Visualization Experiments
+# Multiplex Network Visualization
 
 ## `3D Interactive Visualization`
 
