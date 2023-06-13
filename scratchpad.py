@@ -1,5 +1,4 @@
 import dash
-import numpy as np
 from dash import dcc
 from dash import html
 from dash.dependencies import Input, Output
@@ -7,48 +6,36 @@ import plotly.graph_objs as go
 
 app = dash.Dash(__name__)
 
-# Define node data with color sequence
-def node(id, x, y, z, colors):
-    return {"id": id, "x": x, "y": y, "z": z, "colors": colors}
+# Define node data with color
+def node(id, x, y, z, color):
+    return {"id": id, "x": x, "y": y, "z": z, "color": color}
 
 # L1
 network_1 = [
-    node(1, 1, 1, 1, ["black", "red"]),
-    node(2, 1, 2, 1, ["black", "red"]),
+    node(1, 1, 1, 1, "blue"),
+    node(2, 1, 2, 1, "blue"),
 ]
 
 # L2
 network_2 = [
-    node(3, 2, 2, 2, ["black", "red"]),
-    node(4, 2, 1, 2, ["black", "red"]),
+    node(3, 2, 2, 2, "red"),
+    node(4, 2, 1, 2, "red"),
 ]
 
 # Combine layers
 network_sequence = [network_1, network_2]
 
-# Define edges - two per node, one inter-layer
+# Define edges
 edges = [
-    {"source": 1, "target": 2 }, 
-    {"source": 1, "target": 3 },
-    {"source": 2, "target": 1 }, 
-    {"source": 2, "target": 4 },
-    {"source": 3, "target": 4 }, 
-    {"source": 3, "target": 1 },
-    {"source": 4, "target": 3 }, 
-    {"source": 4, "target": 2 },
+    {"source": 1, "target": 2, "layer": 0},
+    {"source": 3, "target": 4, "layer": 1},
+    {"source": 1, "target": 3, "layer": "inter"},  # inter-layer connections
 ]
-
-# Define function to find a node by id
-def find_node(id):
-    for network in network_sequence:
-        for node in network:
-            if node["id"] == id:
-                return node
 
 # Basic layout for app
 app.layout = html.Div(
     [
-        dcc.Graph(id="3d-scatter-plot", style={'height': '800px', 'width': '800px'}),
+        dcc.Graph(id="3d-scatter-plot"),
         dcc.Slider(
             id="time-slider",
             min=0,
@@ -57,7 +44,12 @@ app.layout = html.Div(
             marks={str(i): f"Time {i}" for i in range(len(network_sequence))},
             step=None,
         ),
-    ])
+    ]
+)
+
+
+def find_node(nodes, id):
+    return next(node for node in nodes if node["id"] == id)
 
 
 @app.callback(Output("3d-scatter-plot", "figure"), [Input("time-slider", "value")])
@@ -65,8 +57,15 @@ def update_graph(time_step):
     data = []
     # Add edges
     for edge in edges:
-        source_node = find_node(edge["source"])
-        target_node = find_node(edge["target"])
+        if edge["layer"] == "inter":
+            source_node = find_node(network_1, edge["source"])
+            target_node = find_node(network_2, edge["target"])
+        elif edge["layer"] == time_step:
+            source_node = find_node(network_sequence[edge["layer"]], edge["source"])
+            target_node = find_node(network_sequence[edge["layer"]], edge["target"])
+        else:
+            continue
+
         data.append(
             go.Scatter3d(
                 x=[source_node["x"], target_node["x"]],
@@ -87,14 +86,14 @@ def update_graph(time_step):
                 z=[node["z"] for node in network],
                 mode="markers",
                 marker=dict(
-                    size=6,
-                    color=[node["colors"][time_step] for node in network],
+                    size=3,
+                    color=[node["color"] for node in network],  # Color based on node data
                     opacity=0.8,
                 ),
                 showlegend=False,
             )
         )
-
+    
     # Add planes
     x = np.linspace(0, 3, 2)
     y = np.linspace(0, 3, 2)
