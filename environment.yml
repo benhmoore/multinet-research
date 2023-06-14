@@ -2,7 +2,7 @@ name: multinet
 channels:
   - defaults
 dependencies:
-  - ca-certificates=2023.01.10=hca03da5_0
+  - colorama=0.4.6=py39hca03da5_0
   - libcxx=14.0.6=h848a8c0_0
   - libffi=3.4.4=hca03da5_0
   - ncurses=6.4=h313beb8_0
