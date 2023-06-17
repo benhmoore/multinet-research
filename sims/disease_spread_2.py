@@ -72,8 +72,7 @@ def get_sir_model(graph):
 
 # Generate the model iterations
 def run_sir_model(model, time_steps):
-    iterations = model.iteration_bunch(time_steps)
-    return iterations
+    return model.iteration_bunch(time_steps)
 
 
 # network
