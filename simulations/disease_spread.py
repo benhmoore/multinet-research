@@ -1,8 +1,8 @@
 # imports
 import dash
 import random
-import dash_core_components as dcc
-import dash_html_components as html
+from dash import dcc
+from dash import html
 from dash.dependencies import Input, Output
 import plotly.graph_objs as go
 import networkx as nx
@@ -11,12 +11,13 @@ from ndlib.models.ModelConfig import Configuration
 
 
 # Function to build the model
-def get_sir_model(graph):
+def get_sir_model(graph, num_infected):
     model = ep.SIRModel(graph)
     config = Configuration()
     config.add_model_parameter("beta", 0.8)
     config.add_model_parameter("gamma", 0.01)
-    config.add_model_initial_configuration("Infected", [0])
+    infected_nodes = random.sample(list(graph.nodes()), num_infected)
+    config.add_model_initial_configuration("Infected", infected_nodes)
     model.set_initial_status(config)
     return model
 
@@ -29,6 +30,7 @@ def run_sir_model(model, time_steps):
 # network
 G1 = nx.erdos_renyi_graph(100, 0.06)
 G2 = nx.erdos_renyi_graph(100, 0.06)
+time_steps = 4  # Set the time_steps globally
 
 # Assign random positions for the nodes in each network layer
 for G in [G1, G2]:
@@ -37,19 +39,15 @@ for G in [G1, G2]:
 
 network_layers = [G1, G2]
 
-
-# Generate models for each layer
-models = [get_sir_model(layer) for layer in network_layers]
-time_steps = 4
-
-# Run each model and store results
-model_results = [run_sir_model(model, time_steps) for model in models]
-
 app = dash.Dash(__name__)
 
 # Initialize the app layout
 app.layout = html.Div(
     [
+        html.Label("Initial infected nodes:", style={"font-weight": "bold"}),
+        dcc.Input(id="input-infected", type="number", value=1),
+        dcc.Store(id="model-store"),
+        dcc.Store(id="infected-store", data=1),
         dcc.Graph(id="3d-scatter-plot", style={"height": "800px", "width": "800px"}),
         dcc.Slider(
             id="time-slider",
@@ -63,9 +61,22 @@ app.layout = html.Div(
 )
 
 
-# Callback function to update the graph
-@app.callback(Output("3d-scatter-plot", "figure"), [Input("time-slider", "value")])
-def update_graph(time_step):
+@app.callback(
+    Output("infected-store", "data"),
+    Input("input-infected", "value"),
+)
+def update_infected(num_infected):
+    return num_infected
+
+
+@app.callback(
+    Output("3d-scatter-plot", "figure"),
+    [Input("time-slider", "value"), Input("infected-store", "data")],
+)
+def update_graph(time_step, num_infected):
+    models = [get_sir_model(layer, num_infected) for layer in network_layers]
+    model_results = [run_sir_model(model, time_steps) for model in models]
+
     data = []
 
     # Create traces for edges and nodes
@@ -124,9 +135,9 @@ def update_graph(time_step):
     # Define layout
     layout = go.Layout(
         scene=dict(
-            xaxis=dict(range=[-1, 1], autorange=False),
-            yaxis=dict(range=[-1, 1], autorange=False),
-            zaxis=dict(range=[-1, 1], autorange=False),
+            xaxis=dict(title="", showticklabels=False, range=[-1, 1], autorange=False),
+            yaxis=dict(title="", showticklabels=False, range=[-1, 1], autorange=False),
+            zaxis=dict(title="", showticklabels=False, range=[-1, 1], autorange=False),
             aspectratio=dict(x=1, y=1, z=1),
             camera=dict(eye=dict(x=1.2, y=1.2, z=1.2)),
         )
