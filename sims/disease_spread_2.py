@@ -8,55 +8,6 @@ import plotly.graph_objs as go
 import networkx as nx
 import ndlib.models.epidemics as ep
 from ndlib.models.ModelConfig import Configuration
-from scipy.linalg import block_diag
-
-
-# Supra-Laplacian calculator
-def calculate_supra_laplacian(
-    network_layers, interlayer_edges: list, interlayer_weight: float = 1.0
-):
-    """Calculate the supra-Laplacian matrix of a multiplex network.
-
-    Args:
-        network_layers (list[networkx.Graph]): List of network layers.
-        interlayer_edges (list[tuple]): List of interlayer edges.
-        interlayer_weight (float, optional): Weight of interlayer edges. Defaults to 1.0.
-
-    Returns:
-        numpy.ndarray: Supra-Laplacian matrix of the multiplex network.
-    """
-    n = len(network_layers[0].nodes)  # number of nodes in each layer
-    m = len(network_layers)  # number of layers
-
-    # Create aggregated adjacency matrix
-    adj_matrices = [nx.adjacency_matrix(G).toarray() for G in network_layers]
-    aggregated_adj_matrix = block_diag(*adj_matrices)
-
-    # Create supra-Laplacian matrix from aggregated adjacency matrix
-    # The supra-Laplacian matrix is a block diagonal matrix where each
-    # block corresponds to a layer in the multiplex network.
-    # The size of each block is n x n, where n is the number of
-    # nodes in each layer.
-    supra_L = (
-        nx.laplacian_matrix(nx.from_numpy_array(aggregated_adj_matrix))
-        .toarray()
-        .astype(float)
-    )
-
-    # Update supra-Laplacian to account for the interlayer edges
-    for edge in interlayer_edges:
-        i, j, layer_i, layer_j = edge
-
-        # Add the interlayer weight to each interlayer edge in the
-        # supra-Laplacian matrix using list slicing.
-        supra_L[
-            layer_i * n : (layer_i + 1) * n, layer_j * n : (layer_j + 1) * n
-        ] += interlayer_weight
-        supra_L[
-            layer_j * n : (layer_j + 1) * n, layer_i * n : (layer_i + 1) * n
-        ] += interlayer_weight
-
-    return supra_L
 
 
 # Function to build the model
@@ -112,7 +63,7 @@ app.layout = html.Div(
 )
 
 
-# App callback function to update the graph
+# Callback function to update the graph
 @app.callback(Output("3d-scatter-plot", "figure"), [Input("time-slider", "value")])
 def update_graph(time_step):
     data = []
@@ -123,7 +74,7 @@ def update_graph(time_step):
             x=[],
             y=[],
             z=[],
-            line=dict(width=0.5, color="#888"),
+            line={"width": 0.5, "color": "#888"},
             hoverinfo="none",
             mode="lines",
         )
@@ -134,43 +85,41 @@ def update_graph(time_step):
             z=[],
             mode="markers",
             hoverinfo="text",
-            marker=dict(
-                showscale=False,
-                colorscale="Viridis",
-                reversescale=True,
-                color=[],
-                size=6,
-                opacity=0.8,
-                line=dict(width=0.5, color="#888"),
-            ),
+            marker={
+                "showscale": False,
+                "colorscale": "Viridis",
+                "reversescale": True,
+                "color": [],
+                "size": 6,
+                "opacity": 0.8,
+                "line": {"width": 0.5, "color": "#888"},
+            },
         )
 
         # Add edges to trace
         for edge in network.edges():
             x0, y0 = network.nodes[edge[0]]["pos"]
             x1, y1 = network.nodes[edge[1]]["pos"]
-            edge_trace["x"] += tuple([x0, x1, None])
-            edge_trace["y"] += tuple([y0, y1, None])
-            edge_trace["z"] += tuple([idx, idx, None])
+            edge_trace["x"] += (x0, x1, None)
+            edge_trace["y"] += (y0, y1, None)
+            edge_trace["z"] += (idx, idx, None)
 
         # Add nodes to trace
         for node in network.nodes:
             x, y = network.nodes[node]["pos"]
-            node_trace["x"] += tuple([x])
-            node_trace["y"] += tuple([y])
-            node_trace["z"] += tuple([idx])  # Z-coordinate based on the layer index
+            node_trace["x"] += (x,)
+            node_trace["y"] += (y,)
+            node_trace["z"] += (idx,)
             if node in model_results[idx][time_step]["status"]:
                 status = model_results[idx][time_step]["status"][node]
             else:
-                status = 0  # Or whatever default value you want for nodes not present
+                status = 0  # default value
             color = (
                 "red" if status == 1 else "blue"
             )  # Color based on the infection status
-            node_trace["marker"]["color"] += tuple([color])
+            node_trace["marker"]["color"] += (color,)
 
-        # Add edge_trace and node_trace to data
-        data.append(edge_trace)
-        data.append(node_trace)
+        data.extend((edge_trace, node_trace))
 
     # Define layout
     layout = go.Layout(
