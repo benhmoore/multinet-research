@@ -3,19 +3,23 @@ import dash
 import random
 from dash import dcc
 from dash import html
+
 from dash.dependencies import Input, Output
 import plotly.graph_objs as go
 import networkx as nx
 import ndlib.models.epidemics as ep
 from ndlib.models.ModelConfig import Configuration
 
+import pandas as pd
+from dash import dash_table
+
 
 # Function to build the model
-def get_sir_model(graph, num_infected):
+def get_sir_model(graph, num_infected, beta, gamma):
     model = ep.SIRModel(graph)
     config = Configuration()
-    config.add_model_parameter("beta", 0.8)
-    config.add_model_parameter("gamma", 0.01)
+    config.add_model_parameter("beta", beta)
+    config.add_model_parameter("gamma", gamma)
     infected_nodes = random.sample(list(graph.nodes()), num_infected)
     config.add_model_initial_configuration("Infected", infected_nodes)
     model.set_initial_status(config)
@@ -30,7 +34,7 @@ def run_sir_model(model, time_steps):
 # network
 G1 = nx.erdos_renyi_graph(100, 0.06)
 G2 = nx.erdos_renyi_graph(100, 0.06)
-time_steps = 4  # Set the time_steps globally
+time_steps = 5  # Set the time_steps globally
 
 # Assign random positions for the nodes in each network layer
 for G in [G1, G2]:
@@ -39,16 +43,31 @@ for G in [G1, G2]:
 
 network_layers = [G1, G2]
 
-app = dash.Dash(__name__)
+app = dash.Dash(
+    __name__,
+    external_stylesheets=[
+        "https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css"
+    ],
+)
 
 # Initialize the app layout
 app.layout = html.Div(
     [
         html.Label("Initial infected nodes:", style={"font-weight": "bold"}),
+        html.P("The initial number of infected nodes in the graph."),
         dcc.Input(id="input-infected", type="number", value=1),
-        dcc.Store(id="model-store"),
-        dcc.Store(id="infected-store", data=1),
-        dcc.Graph(id="3d-scatter-plot", style={"height": "800px", "width": "800px"}),
+        html.Label("Beta (Infection rate):", style={"font-weight": "bold"}),
+        html.P(
+            "The probability of disease transmission from an infected node to a susceptible node."
+        ),
+        dcc.Slider(id="beta-slider", min=0, max=1, step=0.1, value=0.8),
+        html.Label("Gamma (Recovery rate):", style={"font-weight": "bold"}),
+        html.P(
+            "The probability of an infected node moving into the recovered stage in each time step."
+        ),
+        dcc.Slider(id="gamma-slider", min=0, max=1, step=0.1, value=0.01),
+        html.Label("Time:", style={"font-weight": "bold"}),
+        html.P("The time step at which to view the state of the graph."),
         dcc.Slider(
             id="time-slider",
             min=0,
@@ -57,24 +76,61 @@ app.layout = html.Div(
             marks={str(i): f"Time {i}" for i in range(time_steps)},
             step=None,
         ),
+        dash_table.DataTable(id="status-table"),
+        dcc.Graph(id="3d-scatter-plot", style={"height": "800px", "width": "800px"}),
     ]
 )
 
 
+# Add a new callback to generate table data
 @app.callback(
-    Output("infected-store", "data"),
-    Input("input-infected", "value"),
+    Output("status-table", "data"),
+    Output("status-table", "columns"),
+    [
+        Input("time-slider", "value"),
+        Input("input-infected", "value"),
+        Input("beta-slider", "value"),
+        Input("gamma-slider", "value"),
+    ],
 )
-def update_infected(num_infected):
-    return num_infected
+def update_table(time_step, num_infected, beta, gamma):
+    models = [
+        get_sir_model(layer, num_infected, beta, gamma) for layer in network_layers
+    ]
+    model_results = [run_sir_model(model, time_steps) for model in models]
+
+    # Compute the counts of each status at the current time step
+    status_counts = {"Susceptible": 0, "Infected": 0, "Recovered": 0}
+    for result in model_results:
+        for status, count in result[time_step]["node_count"].items():
+            if status == 0:
+                status_counts["Susceptible"] += count
+            elif status == 1:
+                status_counts["Infected"] += count
+            elif status == 2:
+                status_counts["Recovered"] += count
+
+    # Create a DataFrame and format it for use with DataTable
+    df = pd.DataFrame([status_counts])
+    data = df.to_dict("records")
+    columns = [{"name": i, "id": i} for i in df.columns]
+
+    return data, columns
 
 
 @app.callback(
     Output("3d-scatter-plot", "figure"),
-    [Input("time-slider", "value"), Input("infected-store", "data")],
+    [
+        Input("time-slider", "value"),
+        Input("input-infected", "value"),
+        Input("beta-slider", "value"),
+        Input("gamma-slider", "value"),
+    ],
 )
-def update_graph(time_step, num_infected):
-    models = [get_sir_model(layer, num_infected) for layer in network_layers]
+def update_graph(time_step, num_infected, beta, gamma):
+    models = [
+        get_sir_model(layer, num_infected, beta, gamma) for layer in network_layers
+    ]
     model_results = [run_sir_model(model, time_steps) for model in models]
 
     data = []
@@ -126,7 +182,7 @@ def update_graph(time_step, num_infected):
             else:
                 status = 0  # default value
             color = (
-                "red" if status == 1 else "blue"
+                "red" if status == 1 else "green" if status == 2 else "blue"
             )  # Color based on the infection status
             node_trace["marker"]["color"] += (color,)
 
