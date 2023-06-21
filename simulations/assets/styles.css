@@ -1,0 +1,21 @@
+body {
+    padding:120px;
+}
+label {
+    display:block;
+    margin-bottom:5px;
+}
+.rc-slider {
+    margin-left:20px;
+}
+
+div {
+    margin-bottom:10px;
+}
+#input-infected {
+    width: 200px;
+    border-radius:0.5em;
+    border:1px solid black;
+    margin-left:20px;
+    margin-bottom:20px;
+}
