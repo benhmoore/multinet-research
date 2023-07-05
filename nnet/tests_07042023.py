@@ -1,7 +1,6 @@
 import numpy as np
 import networkx as nx
-from networkx.drawing.nx_agraph import graphviz_layout
-from scipy.linalg import eigvals
+import seaborn as sns
 
 import matplotlib.pyplot as plt
 
@@ -54,4 +53,9 @@ plt.title("Spectral Density of BA Graph Eigenvalues")
 plt.show()
 
 nx.draw(nnet, with_labels=True)
+plt.show()
+
+fig, ax = plt.subplots(figsize=(5, 5))
+plt.imshow(adj_array, cmap="Greys", interpolation="none")
+plt.title("Adjacency Matrix")
 plt.show()
