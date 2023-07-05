@@ -2,22 +2,26 @@ name: multinet
 channels:
   - defaults
 dependencies:
-  - colorama=0.4.6=py39hca03da5_0
-  - libcxx=14.0.6=h848a8c0_0
-  - libffi=3.4.4=hca03da5_0
-  - ncurses=6.4=h313beb8_0
-  - openssl=1.1.1t=h1a28f6b_0
-  - pip=23.0.1=py39hca03da5_0
-  - python=3.9.16=hc0d8a6c_2
-  - readline=8.2=h1a28f6b_0
-  - setuptools=66.0.0=py39hca03da5_0
-  - sqlite=3.41.2=h80987f9_0
-  - tk=8.6.12=hb8d0fd4_0
-  - wheel=0.38.4=py39hca03da5_0
-  - xz=5.4.2=h80987f9_0
-  - zlib=1.2.13=h5a0b063_0
+  - colorama=0.4.6
+  - libcxx=14.0.6
+  - libffi=3.4.4
+  - ncurses=6.4
+  - openssl=1.1.1t
+  - pip=23.0.1
+  - python=3.9.16
+  - readline=8.2
+  - setuptools=66.0.0
+  - sqlite=3.41.2
+  - tk=8.6.12
+  - wheel=0.38.4
+  - xz=5.4.2
+  - zlib=1.2.13
   - pip:
+      - ansi-escapes==0.1.1
+      - ansi-styles==0.2.2
       - bokeh==3.1.1
+      - certifi==2023.5.7
+      - charset-normalizer==3.1.0
       - click==8.1.3
       - contourpy==1.0.7
       - cycler==0.11.0
@@ -26,10 +30,14 @@ dependencies:
       - dash-html-components==2.0.0
       - dash-table==5.0.0
       - decorator==5.1.1
+      - dict==2020.12.3
       - dynetx==0.3.1
+      - filelock==3.12.2
       - flask==2.2.3
       - fonttools==4.39.4
       - future==0.18.3
+      - has-flag==0.1.1
+      - idna==3.4
       - igraph==0.10.4
       - importlib-metadata==6.6.0
       - importlib-resources==5.12.0
@@ -38,27 +46,42 @@ dependencies:
       - kiwisolver==1.4.4
       - markupsafe==2.1.2
       - matplotlib==3.7.1
+      - mpmath==1.3.0
       - ndlib==5.1.1
       - netdispatch==0.1.0
       - networkx==3.1
       - numpy==1.24.3
+      - onnx==1.14.0
       - packaging==23.1
       - pandas==2.0.1
       - pillow==9.5.0
       - plotly==5.14.1
-      - pymnet==0.1
+      - protobuf==4.23.3
       - pyparsing==3.0.9
       - python-dateutil==2.8.2
+      - python-graphviz==0.20.1
       - python-igraph==0.10.4
       - pytz==2023.3
       - pyyaml==6.0
+      - requests==2.31.0
       - scipy==1.10.1
       - six==1.16.0
+      - supports-color==0.1.2
+      - sympy==1.12
       - tenacity==8.2.2
       - texttable==1.6.7
+      - torch==2.0.1
+      - torchaudio==2.0.2
+      - torchsummary==1.5.1
+      - torchvis==0.4.0
+      - torchvision==0.15.2
+      - torchviz==0.0.2
       - tornado==6.3.2
       - tqdm==4.65.0
+      - typing-extensions==4.6.3
       - tzdata==2023.3
+      - urllib3==2.0.3
+      - values==2020.12.3
       - werkzeug==2.2.3
       - xyzservices==2023.2.0
       - zipp==3.15.0
