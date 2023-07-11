@@ -1,83 +1,159 @@
 import torch
+import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader, TensorDataset
 import networkx as nx
 import matplotlib.pyplot as plt
-
-
-# Define a simple MLP
-class MLP(torch.nn.Module):
-    def __init__(self):
-        super(MLP, self).__init__()
-        self.fc1 = torch.nn.Linear(16, 16)
-        self.fc2 = torch.nn.Linear(16, 16)
-        self.fc3 = torch.nn.Linear(16, 16)
-        self.fc4 = torch.nn.Linear(16, 16)
-
-    def forward(self, x):
-        x = torch.nn.functional.relu(self.fc1(x))
-        x = torch.nn.functional.relu(self.fc2(x))
-        x = torch.nn.functional.relu(self.fc3(x))
-        x = self.fc4(x)
-        return x
+import imageio
+import os
+from IPython.display import Image
 
 
 def create_graph(module, parent=None):
-    G = nx.DiGraph()
+    G = nx.Graph()
     traverse_model(module, G, parent)
     adjacency_matrix = nx.adjacency_matrix(G)
     return adjacency_matrix.toarray()
 
 
 def traverse_model(module, G, parent=None):
+    previous_node = parent
     for name, child in module.named_children():
         node_name = f"{name}_{id(child)}"
         G.add_node(node_name)
 
-        if parent is not None:
+        if previous_node is not None:
             edge_weight = 0
             if len(list(child.parameters())) > 0:
                 params = torch.cat([x.view(-1) for x in child.parameters()])
                 edge_weight = torch.mean(torch.abs(params)).item()
 
-            if G.has_edge(parent, node_name):
-                G[parent][node_name]["weight"] = edge_weight
+            if G.has_edge(previous_node, node_name):
+                G[previous_node][node_name]["weight"] = edge_weight
             else:
-                G.add_edge(parent, node_name, weight=edge_weight)
+                G.add_edge(previous_node, node_name, weight=edge_weight)
 
-        traverse_model(child, G, parent=node_name)
+        previous_node = node_name
 
 
-# Load the untrained model
-model = MLP()
+## Define the model
+class SineApproximator(nn.Module):
+    def __init__(self, input_dim=3, hidden_dim=100, output_dim=1):
+        super(SineApproximator, self).__init__()
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+        self.output_dim = output_dim
 
-# Small synthetic dataset for training
-X_train = torch.randn(100, 16)  # 100 samples, 16 features each
-y_train = torch.randn(100, 16)  # 100 random target values
-trainset = TensorDataset(X_train, y_train)
-trainloader = DataLoader(trainset, batch_size=10)
+        # Define the network layers
+        self.fc1 = nn.Linear(self.input_dim, self.hidden_dim)
+        self.fc2 = nn.Linear(self.hidden_dim, self.hidden_dim)
+        self.fc3 = nn.Linear(self.hidden_dim, self.hidden_dim)
+        self.fc4 = nn.Linear(self.hidden_dim, self.hidden_dim)
+        self.fc5 = nn.Linear(self.hidden_dim, self.hidden_dim)
+        self.fc6 = nn.Linear(self.hidden_dim, self.hidden_dim)
+        self.fc7 = nn.Linear(self.hidden_dim, self.hidden_dim)
+        self.fc8 = nn.Linear(self.hidden_dim, self.hidden_dim)
+        self.fc9 = nn.Linear(self.hidden_dim, self.hidden_dim)
+        self.fc10 = nn.Linear(self.hidden_dim, self.output_dim)
+        self.relu = nn.ReLU()  # ReLU activation function
 
-criterion = torch.nn.MSELoss()
-optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+        # # Define skip/residual connections
+        # self.shortcut1 = nn.Linear(self.input_dim, self.hidden_dim)
+        # self.shortcut2 = nn.Linear(self.hidden_dim, self.hidden_dim)
+        # self.shortcut3 = nn.Linear(self.hidden_dim, self.hidden_dim)
 
-for epoch in range(5):  # 5 epochs
-    for i, data in enumerate(trainloader, 0):
-        inputs, labels = data
-        optimizer.zero_grad()
-        outputs = model(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
+    def forward(self, x):
+        # identity = x
 
-        # Every 10 iterations, save the adjacency matrix
-        if i % 10 == 0:
-            adjacency_array = create_graph(model)
+        x = self.relu(self.fc1(x))
+        # x = x + self.shortcut1(identity)  # Add the first shortcut connection
 
-            plt.figure(figsize=(6, 6))
-            plt.imshow(adjacency_array, cmap="Greys", interpolation="none")
-            plt.colorbar(label="Edge Weight")
-            plt.title(f"Adjacency Matrix at epoch {epoch} iteration {i}")
-            plt.savefig(f"adjacency_epoch{epoch}_iter{i}.png")
-            plt.close()
+        x = self.relu(self.fc2(x))
+        x = self.relu(self.fc3(x))
+        # x = x + self.shortcut2(x)  # Add the second shortcut connection
 
-print("Finished Training")
+        x = self.relu(self.fc4(x))
+        x = self.relu(self.fc5(x))
+
+        # identity2 = x  # Save the input to the second half of the network
+        x = self.relu(self.fc6(x))
+        x = self.relu(self.fc7(x))
+        # x = x + self.shortcut3(identity2)  # Add the third shortcut connection
+
+        x = self.relu(self.fc8(x))
+        x = self.relu(self.fc9(x))
+
+        return self.fc10(x)
+
+
+# create directory for frames
+if not os.path.exists("frames"):
+    os.makedirs("frames")
+
+# Instantiate the model
+model = SineApproximator()
+
+# Define loss function and optimizer
+criterion = nn.L1Loss()
+optimizer = optim.Adam(model.parameters(), lr=0.002)
+
+# Generate input data
+x = torch.rand(100, 3) * 6.28 - 3.14
+# Generate target data
+mu = torch.zeros(3)
+sigma = torch.ones(3)
+
+# Gaussian Function (3D Gaussian Bell Curve)
+y = torch.exp(-0.5 * ((x - mu) / sigma) ** 2).prod(dim=1, keepdim=True)
+
+# Add noise
+noise = torch.randn(y.size()) * 0.5  # Gaussian noise with mean=0, std=0.1
+y += noise
+
+# Training loop
+images = []
+for epoch in range(2500):
+    optimizer.zero_grad()  # zero the gradient buffers
+
+    # Switch between functions every 500 epochs
+    if epoch < 500:
+        y = torch.exp(-0.5 * ((x - mu) / sigma) ** 2).prod(dim=1, keepdim=True)
+    elif epoch < 1000:  # Switch to an inverted Gaussian function
+        y = 1 - torch.exp(-0.5 * ((x - mu) / sigma) ** 2).prod(dim=1, keepdim=True)
+    elif epoch < 1500:  # Switch to a Gaussian mixture model
+        y = (
+            torch.exp(-0.5 * ((x - mu) / sigma) ** 2).prod(dim=1, keepdim=True)
+            + torch.exp(-0.5 * ((x - mu + 1) / sigma) ** 2).prod(dim=1, keepdim=True)
+            + torch.exp(-0.5 * ((x - mu - 1) / sigma) ** 2).prod(dim=1, keepdim=True)
+        )
+    else:  # Switch to a complex sine function
+        y = (
+            torch.sin(x).sum(dim=1, keepdim=True)
+            + torch.sin(2 * x).sum(dim=1, keepdim=True)
+            + torch.sin(0.5 * x).sum(dim=1, keepdim=True)
+        )
+
+    output = model(x)
+    loss = criterion(output, y)
+    loss.backward()
+    optimizer.step()  # Does the update
+
+    if epoch % 50 == 0:
+        adjacency_array = create_graph(model)
+
+        plt.figure(figsize=(4, 4))
+        plt.imshow(adjacency_array, cmap="gray", interpolation="none")
+        plt.clim(0, 0.2)  # consistent scale for each frame
+        plt.colorbar(label="Edge Weight")
+        plt.title(f"Epoch {epoch}; Loss {loss.item():.5f}")
+        plt.savefig(f"frames/frame_{epoch}.png")
+        plt.close()
+
+        images.append(imageio.imread(f"frames/frame_{epoch}.png"))
+
+
+imageio.mimsave("frames/training.gif", images, loop=15, duration=50)
+
+# Delete the individual frames
+for filename in os.listdir("frames"):
+    if filename.endswith(".png"):
+        os.remove(f"frames/{filename}")
