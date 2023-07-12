@@ -1,9 +1,10 @@
 import os
 import numpy as np
-import imageio
 import matplotlib.pyplot as plt
-from enum import IntEnum
 from torch import nn, optim
+
+from PIL import Image
+import io
 
 from single_net import create_graph
 from multi_net import model_to_pymnet_plot
@@ -15,10 +16,14 @@ def train_and_visualize(
     y,
     cmap="plasma",
     optimizer=None,
-    iterations=15000,
-    frame_duration=50,
+    iterations=8000,
+    frame_duration=80,
+    interval=100,
     criterion=nn.L1Loss(),
 ):
+    # Use dark background style
+    plt.style.use("dark_background")
+
     if optimizer is None:
         optimizer = optim.Adam(model.parameters(), lr=0.001)
 
@@ -34,7 +39,7 @@ def train_and_visualize(
         loss.backward()
         optimizer.step()  # Does the update
 
-        if iteration % 100 == 0:
+        if iteration % interval == 0:
             multi_network_matrices.append(model_to_pymnet_plot(model))
             single_network_matrices.append(create_graph(model))
             losses.append(loss.item())
@@ -44,10 +49,10 @@ def train_and_visualize(
 
     # Get minimum value of all matrices, excluding 0
     min_value_single_network = np.min(
-        [np.min(matrix[matrix != 0]) for matrix in single_network_matrices]
+        [np.min(matrix[matrix > 0]) for matrix in single_network_matrices]
     )
     min_value_multi_network = np.min(
-        [np.min(matrix[matrix != 0]) for matrix in multi_network_matrices]
+        [np.min(matrix[matrix > 0]) for matrix in multi_network_matrices]
     )
 
     # Get maximum value of all matrices
@@ -62,34 +67,69 @@ def train_and_visualize(
     if not os.path.exists("frames"):
         os.makedirs("frames")
 
-    # Create frames
+    # Create frames and keep them in memory
+    frames = []
     for iteration, (multi_matrix, single_matrix, loss) in enumerate(
         zip(multi_network_matrices, single_network_matrices, losses)
     ):
-        fig, axs = plt.subplots(1, 2, figsize=(10, 5))  # 1 row, 2 columns
+        fig, axs = plt.subplots(2, 2, figsize=(10, 10))
 
-        im1 = axs[0].imshow(multi_matrix, cmap=cmap, interpolation="none")
-        axs[0].set_title(f"Multi-Network (Iter. {iteration*100}; Loss {loss:.5f})")
-        fig.colorbar(im1, ax=axs[0], label="Edge Weight")
-        im1.set_clim(
-            min_value_multi_network, max_value_multi_network
-        )  # consistent scale for each frame
+        fig.suptitle(f"Iteration: {iteration*interval}, Loss: {loss:.5f}", fontsize=14)
 
-        im2 = axs[1].imshow(single_matrix, cmap=cmap, interpolation="none")
-        axs[1].set_title(f"Single Network (Iter. {iteration*100}; Loss {loss:.5f})")
-        fig.colorbar(im2, ax=axs[1], label="Edge Weight")
+        im1 = axs[0, 0].imshow(multi_matrix, cmap=cmap, interpolation="none")
+        axs[0, 0].set_title("Multi-Network")
+        axs[0, 0].set_xlabel("Nodes")
+        axs[0, 0].set_ylabel("Nodes")
+        fig.colorbar(im1, ax=axs[0, 0], label="Edge Weight")
+        im1.set_clim(min_value_multi_network, max_value_multi_network)
+
+        im2 = axs[0, 1].imshow(single_matrix, cmap=cmap, interpolation="none")
+        axs[0, 1].set_title("Single Network")
+        axs[0, 1].set_xlabel("Nodes")
+        axs[0, 1].set_ylabel("Nodes")
+        fig.colorbar(im2, ax=axs[0, 1], label="Edge Weight")
         im2.set_clim(min_value_single_network, max_value_single_network)
 
+        # Getting non-zero weights
+        non_zero_multi_weights = multi_matrix[multi_matrix.nonzero()].ravel()
+        non_zero_single_weights = single_matrix[single_matrix.nonzero()].ravel()
+
+        (n, bins, patches) = axs[1, 0].hist(non_zero_multi_weights, bins=50)
+        axs[1, 0].set_title("Multi-Network Histogram")
+        axs[1, 0].set_xlabel("Edge Weight")
+        axs[1, 0].set_ylabel("Frequency")
+
+        (n, bins, patches) = axs[1, 1].hist(non_zero_single_weights, bins=50)
+        axs[1, 1].set_title("Single Network Histogram")
+        axs[1, 1].set_xlabel("Edge Weight")
+        axs[1, 1].set_ylabel("Frequency")
+
         plt.tight_layout()
-        plt.savefig(f"frames/frame_{iteration}.png")
+
+        # Save the figure to a BytesIO object
+        buf = io.BytesIO()
+        plt.savefig(buf, format="png")
+        buf.seek(0)
+
+        # Use PIL to open the image and convert to RGB
+        image = Image.open(buf).convert("RGB")
+        frames.append(image)
+
         plt.close()
 
-    # Create GIF
-    frames = [
-        imageio.imread(f"frames/frame_{i}.png")
-        for i in range(len(multi_network_matrices))
-    ]
-    imageio.mimsave("frames/training.gif", frames, loop=15, duration=frame_duration)
+    # Save the frames as a GIF
+    print("Generating GIF...")
+
+    frames[0].save(
+        "frames/training.gif",
+        format="GIF",
+        append_images=frames[1:],
+        save_all=True,
+        duration=frame_duration,
+        loop=0,
+    )
+
+    print("GIF generated in frames/training.gif")
 
     # Delete the individual frames
     for filename in os.listdir("frames"):
