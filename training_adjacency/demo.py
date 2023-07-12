@@ -1,0 +1,56 @@
+import torch
+import torch.nn as nn
+import torch.optim as optim
+
+from sine_approximator import SineApproximator
+from multi_net import model_to_pymnet_plot
+from single_net import create_graph
+from visualizer import train_and_visualize
+
+# Instantiate the model
+model = SineApproximator()
+
+# Define loss function and optimizer
+criterion = nn.MSELoss()
+optimizer = optim.Adam(model.parameters(), lr=0.0005)
+
+# # Generate input data
+# x = torch.rand(100, 3) * 6.28 - 3.14
+# # Generate target data
+# mu = torch.zeros(3)
+# sigma = torch.ones(3)
+
+# # A complex 3-dimensional sine function
+# y = (
+#     torch.sin(x).sum(dim=1, keepdim=True)
+#     + torch.sin(2 * x).sum(dim=1, keepdim=True)
+#     + torch.sin(0.5 * x).sum(dim=1, keepdim=True)
+# )
+
+# # Add some noise
+# noise = torch.randn(y.size()) * 0.1  # Gaussian noise with mean=0, std=0.1
+# y += noise
+
+
+# Define the 3D Rosenbrock-like function
+def rosenbrock_3d(x, y, z):
+    a = 1
+    b = 100
+    c = 100
+    return (a - x) ** 2 + b * (y - x**2) ** 2 + c * (z - y**2) ** 2
+
+
+# Generate some random input data
+x_values = torch.rand(1000, 1)
+y_values = torch.rand(1000, 1)
+z_values = torch.rand(1000, 1)
+
+# Concatenate the x_values, y_values, and z_values to create the input
+x = torch.cat([x_values, y_values, z_values], dim=-1)
+
+# Compute the corresponding output data
+y = rosenbrock_3d(x_values, y_values, z_values)
+
+
+# Train and visualize
+train_and_visualize(model, x, y, optimizer=optimizer, criterion=criterion)
