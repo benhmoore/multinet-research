@@ -8,6 +8,12 @@ import os
 from IPython.display import Image
 
 
+<<<<<<< HEAD
+=======
+from sine_approximator import SineApproximator
+
+
+>>>>>>> nnet-adj
 def create_graph(module, parent=None):
     G = nx.Graph()
     traverse_model(module, G, parent)
@@ -16,6 +22,7 @@ def create_graph(module, parent=None):
 
 
 def traverse_model(module, G, parent=None):
+<<<<<<< HEAD
     previous_node = parent
     for name, child in module.named_children():
         node_name = f"{name}_{id(child)}"
@@ -83,6 +90,29 @@ class SineApproximator(nn.Module):
         x = self.relu(self.fc9(x))
 
         return self.fc10(x)
+=======
+    for name, child in module.named_children():
+        # Create a node for the child
+        node_name = f"{name}_{id(child)}"
+        G.add_node(node_name)
+
+        # Create an edge from the parent to the child with weight as mean of absolute parameters
+        if parent is not None:
+            if len(list(child.parameters())) > 0:  # Check if the module has parameters
+                params = torch.cat(
+                    [x.view(-1) for x in child.parameters()]
+                )  # Concat all parameters into a 1D tensor
+                edge_weight = torch.mean(
+                    torch.abs(params)
+                ).item()  # Compute mean of absolute values
+            else:
+                edge_weight = 0  # If the module has no parameters, set the weight to 0
+
+            G.add_edge(parent, node_name, weight=edge_weight)
+
+        # Recursively traverse the child's children
+        traverse_model(child, G, parent=node_name)
+>>>>>>> nnet-adj
 
 
 # create directory for frames
@@ -94,7 +124,11 @@ model = SineApproximator()
 
 # Define loss function and optimizer
 criterion = nn.L1Loss()
+<<<<<<< HEAD
 optimizer = optim.Adam(model.parameters(), lr=0.002)
+=======
+optimizer = optim.Adam(model.parameters(), lr=0.001)
+>>>>>>> nnet-adj
 
 # Generate input data
 x = torch.rand(100, 3) * 6.28 - 3.14
@@ -102,8 +136,17 @@ x = torch.rand(100, 3) * 6.28 - 3.14
 mu = torch.zeros(3)
 sigma = torch.ones(3)
 
+<<<<<<< HEAD
 # Gaussian Function (3D Gaussian Bell Curve)
 y = torch.exp(-0.5 * ((x - mu) / sigma) ** 2).prod(dim=1, keepdim=True)
+=======
+# Complex 3d sine function
+y = (
+    torch.sin(x).sum(dim=1, keepdim=True)
+    + torch.sin(2 * x).sum(dim=1, keepdim=True)
+    + torch.sin(0.5 * x).sum(dim=1, keepdim=True)
+)
+>>>>>>> nnet-adj
 
 # Add noise
 noise = torch.randn(y.size()) * 0.5  # Gaussian noise with mean=0, std=0.1
@@ -114,6 +157,7 @@ images = []
 for epoch in range(2500):
     optimizer.zero_grad()  # zero the gradient buffers
 
+<<<<<<< HEAD
     # Switch between functions every 500 epochs
     if epoch < 500:
         y = torch.exp(-0.5 * ((x - mu) / sigma) ** 2).prod(dim=1, keepdim=True)
@@ -132,6 +176,8 @@ for epoch in range(2500):
             + torch.sin(0.5 * x).sum(dim=1, keepdim=True)
         )
 
+=======
+>>>>>>> nnet-adj
     output = model(x)
     loss = criterion(output, y)
     loss.backward()
