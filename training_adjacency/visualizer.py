@@ -17,8 +17,8 @@ def train_and_visualize(
     cmap="plasma",
     optimizer=None,
     iterations=8000,
-    frame_duration=80,
-    interval=100,
+    frame_duration=50,
+    interval=80,
     criterion=nn.L1Loss(),
 ):
     # Use dark background style
