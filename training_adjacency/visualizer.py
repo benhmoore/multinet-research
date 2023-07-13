@@ -63,11 +63,8 @@ def train_and_visualize(
         [np.max(matrix) for matrix in single_network_matrices]
     )
 
-    # Create directory for frames if it doesn't exist
-    if not os.path.exists("frames"):
-        os.makedirs("frames")
-
     # Create frames and keep them in memory
+    print("Plotting frames...")
     frames = []
     for iteration, (multi_matrix, single_matrix, loss) in enumerate(
         zip(multi_network_matrices, single_network_matrices, losses)
@@ -121,7 +118,7 @@ def train_and_visualize(
     print("Generating GIF...")
 
     frames[0].save(
-        "frames/training.gif",
+        "docs/adjacency_matrix_evolution.gif",
         format="GIF",
         append_images=frames[1:],
         save_all=True,
@@ -129,9 +126,4 @@ def train_and_visualize(
         loop=0,
     )
 
-    print("GIF generated in frames/training.gif")
-
-    # Delete the individual frames
-    for filename in os.listdir("frames"):
-        if filename.endswith(".png"):
-            os.remove(f"frames/{filename}")
+    print("GIF generated in docs/adjacency_matrix_evolution.gif")
