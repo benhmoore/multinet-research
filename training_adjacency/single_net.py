@@ -1,33 +1,25 @@
-import torch
+import torch.nn as nn
 import networkx as nx
 
-
-def create_graph(module, parent=None):
+def create_graph(model):
     G = nx.Graph()
-    traverse_model(module, G, parent)
-    adjacency_matrix = nx.adjacency_matrix(G)
+    previous_layer_neurons = [f"input_{i}" for i in range(3)]  # Assuming 3 input neurons
+
+    for idx, module in enumerate(model.modules()):
+        if isinstance(module, nn.Linear):
+            weight_matrix = module.weight.detach().numpy()
+            current_layer_neurons = [f"layer_{idx}_neuron_{i}" for i in range(module.out_features)]
+
+            # Add nodes for the current layer
+            for neuron in current_layer_neurons:
+                G.add_node(neuron)
+            
+            # Connect nodes from the previous layer to the current layer
+            for i, neuron1 in enumerate(previous_layer_neurons):
+                for j, neuron2 in enumerate(current_layer_neurons):
+                    G.add_edge(neuron1, neuron2, weight=weight_matrix[j, i])
+            
+            previous_layer_neurons = current_layer_neurons
+
+    adjacency_matrix = nx.adjacency_matrix(G, weight='weight')
     return adjacency_matrix.toarray()
-
-
-def traverse_model(module, G, parent=None):
-    for name, child in module.named_children():
-        # Create a node for the child
-        node_name = f"{name}_{id(child)}"
-        G.add_node(node_name)
-
-        # Create an edge from the parent to the child with weight as mean of absolute parameters
-        if parent is not None:
-            if len(list(child.parameters())) > 0:  # Check if the module has parameters
-                params = torch.cat(
-                    [x.view(-1) for x in child.parameters()]
-                )  # Concat all parameters into a 1D tensor
-                edge_weight = torch.mean(
-                    torch.abs(params)
-                ).item()  # Compute mean of absolute values
-            else:
-                edge_weight = 0  # If the module has no parameters, set the weight to 0
-
-            G.add_edge(parent, node_name, weight=edge_weight)
-
-        # Recursively traverse the child's children
-        traverse_model(child, G, parent=node_name)

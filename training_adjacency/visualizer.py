@@ -16,7 +16,7 @@ def train_and_visualize(
     y,
     cmap="plasma",
     optimizer=None,
-    iterations=8000,
+    iterations=1000,
     frame_duration=50,
     interval=80,
     criterion=nn.L1Loss(),
@@ -69,6 +69,7 @@ def train_and_visualize(
     for iteration, (multi_matrix, single_matrix, loss) in enumerate(
         zip(multi_network_matrices, single_network_matrices, losses)
     ):
+        print("Plotting iteration", iteration*interval)
         fig, axs = plt.subplots(2, 2, figsize=(10, 10))
 
         fig.suptitle(f"Iteration: {iteration*interval}, Loss: {loss:.5f}", fontsize=14)
