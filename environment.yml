@@ -59,7 +59,6 @@ dependencies:
       - protobuf==4.23.3
       - pyparsing==3.0.9
       - python-dateutil==2.8.2
-      - python-graphviz==0.20.1
       - python-igraph==0.10.4
       - pytz==2023.3
       - pyyaml==6.0
