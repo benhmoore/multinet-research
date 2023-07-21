@@ -13,9 +13,14 @@ from ndlib.models.ModelConfig import Configuration
 import pandas as pd
 from dash import dash_table
 
+# - - - - - - - - - - - - - - - - - - - - -
+# Set the number of simulation time steps
+TIME_STEPS = 5
+# - - - - - - - - - - - - - - - - - - - - -
 
-# Function to build the model
+
 def get_sir_model(graph, num_infected, beta, gamma):
+    """Returns a configured SIR model for the given graph."""
     model = ep.SIRModel(graph)
     config = Configuration()
     config.add_model_parameter("beta", beta)
@@ -26,23 +31,20 @@ def get_sir_model(graph, num_infected, beta, gamma):
     return model
 
 
-# Generate the model iterations
 def run_sir_model(model, time_steps):
+    """Runs the given SIR model for the given number of time steps."""
     return model.iteration_bunch(time_steps)
 
 
-# network
-G1 = nx.erdos_renyi_graph(100, 0.06)
-G2 = nx.erdos_renyi_graph(100, 0.06)
-time_steps = 5  # Set the time_steps globally
+# Create two random graphs
+network_layers = [nx.erdos_renyi_graph(100, 0.06), nx.erdos_renyi_graph(100, 0.06)]
 
 # Assign random positions for the nodes in each network layer
-for G in [G1, G2]:
+for G in network_layers:
     for node in G.nodes():
         G.nodes[node]["pos"] = (random.uniform(-1, 1), random.uniform(-1, 1))
 
-network_layers = [G1, G2]
-
+# Initialize the app
 app = dash.Dash(
     __name__,
     external_stylesheets=[
@@ -71,9 +73,9 @@ app.layout = html.Div(
         dcc.Slider(
             id="time-slider",
             min=0,
-            max=time_steps - 1,
+            max=TIME_STEPS - 1,
             value=0,
-            marks={str(i): f"Time {i}" for i in range(time_steps)},
+            marks={str(i): f"Time {i}" for i in range(TIME_STEPS)},
             step=None,
         ),
         dash_table.DataTable(id="status-table"),
@@ -82,7 +84,6 @@ app.layout = html.Div(
 )
 
 
-# Add a new callback to generate table data
 @app.callback(
     Output("status-table", "data"),
     Output("status-table", "columns"),
@@ -97,7 +98,7 @@ def update_table(time_step, num_infected, beta, gamma):
     models = [
         get_sir_model(layer, num_infected, beta, gamma) for layer in network_layers
     ]
-    model_results = [run_sir_model(model, time_steps) for model in models]
+    model_results = [run_sir_model(model, TIME_STEPS) for model in models]
 
     # Compute the counts of each status at the current time step
     status_counts = {"Susceptible": 0, "Infected": 0, "Recovered": 0}
@@ -131,7 +132,7 @@ def update_graph(time_step, num_infected, beta, gamma):
     models = [
         get_sir_model(layer, num_infected, beta, gamma) for layer in network_layers
     ]
-    model_results = [run_sir_model(model, time_steps) for model in models]
+    model_results = [run_sir_model(model, TIME_STEPS) for model in models]
 
     data = []
 
@@ -177,10 +178,9 @@ def update_graph(time_step, num_infected, beta, gamma):
             node_trace["x"] += (x,)
             node_trace["y"] += (y,)
             node_trace["z"] += (idx,)
+            status = 0
             if node in model_results[idx][time_step]["status"]:
                 status = model_results[idx][time_step]["status"][node]
-            else:
-                status = 0  # default value
             color = (
                 "red" if status == 1 else "green" if status == 2 else "blue"
             )  # Color based on the infection status

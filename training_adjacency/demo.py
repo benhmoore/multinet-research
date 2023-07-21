@@ -2,11 +2,11 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from sine_approximator import SineApproximator
+from model import RosenbrockApproximator
 from visualizer import train_and_visualize
 
 # Instantiate the model
-model = SineApproximator()
+model = RosenbrockApproximator()
 
 # Define loss function and optimizer
 criterion = nn.MSELoss()
