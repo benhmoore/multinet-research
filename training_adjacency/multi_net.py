@@ -2,37 +2,19 @@ import pymnet
 import torch.nn as nn
 
 
-def model_to_pymnet_plot(model, model_name="Default"):
-    """
-    Converts a PyTorch model into a pymnet multilayer network and returns its supra-adjacency matrix.
+def generate_supra_adjacency_matrix(model, model_name="Default"):
+    """Converts a PyTorch model to a multilayer network and returns the supra-adjacency matrix.
 
-    This function iterates through the layers of the model, creates a layer in the multilayer network for each
-    nn.Linear layer, and adds nodes to each layer corresponding to the neurons in the model layer. It then
-    connects these nodes based on the weights of the model's layers.
+    Args:
+        model (nn.Module): PyTorch model to convert to a multilayer network.
+        model_name (str, optional): Name of the model. Defaults to "Default".
 
-    The function specifically generates a supra-adjacency matrix from the multilayer network. The supra-adjacency
-    matrix is a block matrix where each block represents the adjacency matrix of a single layer (diagonal blocks)
-    and the connections between layers (off-diagonal blocks).
+    Raises:
+        ValueError: If the first module of the model is not an instance of nn.Linear.
 
-    Parameters
-    ----------
-    model : torch.nn.Module
-        PyTorch model to be converted into a multilayer network.
-    model_name : str, optional
-        Name of the model, by default "Default".
+    Returns:
+        np.array: Supra-adjacency matrix of the multilayer network.
 
-    Returns
-    -------
-    np.array
-        Supra-adjacency matrix of the multilayer network. The matrix has a dimension of (N*M) x (N*M), where N is
-        the total number of unique nodes (or neurons) across all layers, and M is the total number of layers.
-        Each node represents a neuron in the model and each layer in the multilayer network corresponds to an
-        nn.Linear layer in the model.
-
-    Raises
-    ------
-    ValueError
-        If the first module of the model is not an instance of nn.Linear.
     """
 
     # Create a multilayer network

@@ -2,18 +2,18 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from sine_approximator import SineApproximator
+from model import RosenbrockApproximator
 from visualizer import train_and_visualize
 
 # Instantiate the model
-model = SineApproximator()
+model = RosenbrockApproximator()
 
 # Define loss function and optimizer
 criterion = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=0.0005)
 
 
-# Define the 3D Rosenbrock-like function
+# Define the 3D Rosenbrock-like function to approximate
 def rosenbrock_3d(x, y, z):
     a = 1
     b = 100

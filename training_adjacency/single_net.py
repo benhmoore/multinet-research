@@ -2,33 +2,14 @@ import torch.nn as nn
 import networkx as nx
 
 
-def create_graph(model):
-    """
-    Converts a PyTorch model into a NetworkX graph and returns its adjacency matrix.
+def generate_adjacency_matrix(model: nn.Module):
+    """Generates the adjacency matrix of a PyTorch model.
 
-    This function iterates over the layers of the PyTorch model, treating the entire model as a single network.
-    For each nn.Linear layer, it adds nodes to the graph corresponding to the neurons in the layer, and adds edges
-    based on the weights of the connections between neurons in the layer and the previous layer.
+    Args:
+        model (nn.Module): PyTorch model to generate the adjacency matrix of.
 
-    The function specifically generates an adjacency matrix from the graph. The adjacency matrix is a square matrix
-    where each row and column corresponds to a node (neuron) in the graph, and the value at a specific row and column
-    represents the weight of the edge connecting the two corresponding nodes.
-
-    Parameters
-    ----------
-    model : torch.nn.Module
-        PyTorch model to be converted into a NetworkX graph.
-
-    Returns
-    -------
-    np.array
-        Adjacency matrix of the NetworkX graph. The matrix has dimensions of N x N, where N is the total number of
-        unique nodes (neurons) across all layers in the model. Each node represents a neuron in the model.
-
-    Raises
-    ------
-    ValueError
-        If the first module of the model is not an instance of nn.Linear.
+    Returns:
+        np.array: Adjacency matrix of the PyTorch model.
     """
 
     G = nx.Graph()
