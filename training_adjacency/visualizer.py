@@ -1,14 +1,14 @@
+import io
+
+from PIL import Image
 import seaborn as sns
 import numpy as np
 from matplotlib.ticker import FormatStrFormatter
 import matplotlib.pyplot as plt
 from torch import nn, optim
 
-from PIL import Image
-import io
-
-from single_net import create_graph
-from multi_net import model_to_pymnet_plot
+from single_net import generate_adjacency_matrix
+from multi_net import generate_supra_adjacency_matrix
 
 
 def train_and_visualize(
@@ -21,7 +21,23 @@ def train_and_visualize(
     frame_duration=100,
     interval=3000,
     criterion=nn.L1Loss(),
+    output_path="docs/adjacency_matrix_evolution.gif",
 ):
+    """Trains a PyTorch model and visualizes the evolution of the adjacency matrix, outputting a GIF.
+
+    Args:
+        model (torch.nn.Module): PyTorch model to train.
+        x (torch.Tensor): Input data to the model.
+        y (torch.Tensor): Output data to the model.
+        cmap (str, optional): Colormap to use for the adjacency matrix. Defaults to "plasma".
+        optimizer (PyTorch optimizer, optional): PyTorch optimizer to use for training. Defaults to Adam if None.
+        iterations (int, optional): Number of iterations to train the model for. Defaults to 120,000.
+        frame_duration (int, optional): Duration of each frame in the GIF in milliseconds. Defaults to 100.
+        interval (int, optional): Interval between iterations to plot. Defaults to 3,000.
+        criterion (PyTorch loss function, optional): PyTorch loss function to use for training. Defaults to L1Loss.
+        output_path (str, optional): Path to save the GIF to. Defaults to "docs/adjacency_matrix_evolution.gif".
+    """
+
     # Use dark background style
     plt.style.use("dark_background")
 
@@ -41,8 +57,8 @@ def train_and_visualize(
         optimizer.step()  # Does the update
 
         if iteration % interval == 0:
-            multi_network_matrices.append(model_to_pymnet_plot(model))
-            single_network_matrices.append(create_graph(model))
+            multi_network_matrices.append(generate_supra_adjacency_matrix(model))
+            single_network_matrices.append(generate_adjacency_matrix(model))
             losses.append(loss.item())
 
             print(f"Iteration {iteration} of {iterations} complete.")
@@ -128,11 +144,11 @@ def train_and_visualize(
     print("Generating GIF...")
 
     frames[0].save(
-        "docs/adjacency_matrix_evolution.gif",
+        output_path,
         format="GIF",
         append_images=frames[1:],
         save_all=True,
         duration=[frame_duration] * len(frames[:-1]) + [frame_duration * 20],
         loop=0,
     )
-    print("GIF generated in docs/adjacency_matrix_evolution.gif")
+    print(f"GIF generated in {output_path}")

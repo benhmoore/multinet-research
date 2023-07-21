@@ -13,7 +13,7 @@ criterion = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=0.0005)
 
 
-# Define the 3D Rosenbrock-like function
+# Define the 3D Rosenbrock-like function to approximate
 def rosenbrock_3d(x, y, z):
     a = 1
     b = 100
